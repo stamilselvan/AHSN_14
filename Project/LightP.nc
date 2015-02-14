@@ -18,6 +18,7 @@ module LightP {
 		interface ShellCommand as SetCmd;
 		
 		interface UDP as SettingSend;
+		interface UDP as SyncNodes;	// Multicast
 	}
 } implementation {
 
@@ -31,10 +32,11 @@ module LightP {
 
 	nx_struct settings_report sreport;
 	settings_t configure;
-	bool isDevSync = FALSE;
+	bool isDevSync = FALSE, isSyncerPresent = FALSE, amISyncer = FALSE;
 
 	struct sockaddr_in6 multicast;
 	struct sockaddr_in6 settings_multicast;
+	struct sockaddr_in6 settings_unicast;
 	uint8_t alternate_count = 0;
 
 	// boot
@@ -53,6 +55,10 @@ module LightP {
 
 		settings_multicast.sin6_port = htons(4000);
 		inet_pton6(MULTICAST, &settings_multicast.sin6_addr);
+		call SyncNodes.bind(4000);
+
+		settings_unicast.sin6_port = htons(4000);
+		inet_pton6(REPORT_DEST, &settings_unicast.sin6_addr);
 		call SettingSend.bind(4000);
 	
 		call RadioControl.start();
@@ -60,7 +66,16 @@ module LightP {
 
 	task void report_settings() {
 		call Leds.led2Toggle();
-		call SettingSend.sendto(&settings_multicast, &sreport, sizeof(sreport));
+
+		
+		if(amISyncer || !isSyncerPresent) {
+			call SyncNodes.sendto(&settings_multicast, &sreport, sizeof(sreport));
+			call Leds.led0On();
+		}
+
+		call SettingSend.sendto(&settings_unicast, &sreport, sizeof(sreport));
+
+		isSyncerPresent = FALSE;
 	}
 
 	event void Temperature.readDone(error_t e, uint16_t data) {
@@ -78,7 +93,7 @@ module LightP {
 	}
 	// radio
 	event void RadioControl.startDone(error_t e) {
-		call SensorReadTimer.startOneShot(configure.sample_period * 2);
+		call SensorReadTimer.startOneShot(configure.sample_period * 3);
 	}
 
 	event void RadioControl.stopDone(error_t e) {}
@@ -91,6 +106,9 @@ module LightP {
 		else {
 			/* we are alone in the network */
 			isDevSync = TRUE;
+			isSyncerPresent = TRUE;
+			amISyncer = TRUE;
+			call Leds.led0On();
 			call SensorReadTimer.startPeriodic(configure.sample_period);
 		}
 	}
@@ -100,7 +118,6 @@ module LightP {
 		call Leds.set((alternate_count%2 == 0) ? 7 : 0);
 		++alternate_count % 2;	
 	}
-
 
 	event char *GetCmd.eval(int argc, char **argv) {
 		char *ret = call GetCmd.getBuffer(50);
@@ -157,6 +174,9 @@ module LightP {
 	}
 
 	event void SettingSend.recvfrom(struct sockaddr_in6 *from, void *data,
+					uint16_t len, struct ip6_metadata *meta) { }
+	
+	event void SyncNodes.recvfrom(struct sockaddr_in6 *from, void *data,
 					uint16_t len, struct ip6_metadata *meta) {
 
 		if(!isDevSync) {
@@ -164,7 +184,9 @@ module LightP {
 			call Leds.led1On();
 			call SensorReadTimer.startPeriodic(configure.sample_period + TOS_NODE_ID);
 		}
-		
+		isSyncerPresent = TRUE;
+		amISyncer = FALSE;
+		call Leds.led0Off();
 	}
 
 }

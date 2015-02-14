@@ -13,18 +13,14 @@ implementation {
 	components UdpC;
 	components UDPShellC;
 	components RPLRoutingC;
-	//components BlinkC;
 
 	components StaticIPAddressTosIdC;
 
 	LightP.RadioControl -> IPStackC;
 
-	//components new ShellCommandC("read") as ReadCmd;
-	//components new ShellCommandC("reset") as ResetCmd;
 	components new ShellCommandC("get") as GetCmd;
 	components new ShellCommandC("set") as SetCmd;
 	
-	//LightP.ResetCmd -> ResetCmd;
 	LightP.GetCmd -> GetCmd;
 	LightP.SetCmd -> SetCmd;
 
@@ -33,22 +29,11 @@ implementation {
 	components new TimerMilliC() as BlinkTimer;
 	LightP.BlinkTimer -> BlinkTimer;
 
-	//components new HamamatsuS1087ParC() as SensorPar;
-	//LightP.StreamPar -> SensorPar.ReadStream;
-
-	// added UDP Socket
-/*	components new UdpSocketC() as TheftSend;
-	LightP.TheftSend -> TheftSend;*/
-
 	components new UdpSocketC() as SettingSend;
 	LightP.SettingSend -> SettingSend;
 
-	//components new HamamatsuS1087ParC() as LightPar;
-	//LightP.Light -> LightPar.Read;
-
-	/*components new ConfigStorageC(VOLUME_CONFIG) as ThSamSettings;
-	LightP.ConfigMount -> ThSamSettings;
-	LightP.ConfigStorage -> ThSamSettings;*/
+	components new UdpSocketC() as SyncNodes;
+	LightP.SyncNodes -> SyncNodes;
 
 	components new  SensirionSht11C() as TemperateHumiditySensor;
 	LightP.Temperature -> TemperateHumiditySensor.Temperature;
