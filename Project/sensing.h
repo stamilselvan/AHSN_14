@@ -15,6 +15,7 @@ nx_struct settings_report {
 	 nx_uint8_t product_id;
 	 nx_uint16_t temp;
 	 nx_uint8_t node_id;
+         nx_uint8_t warning;
 };
 
 #define REPORT_DEST "fec0::100"

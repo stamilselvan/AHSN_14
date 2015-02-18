@@ -52,7 +52,8 @@ module LightP {
 		sreport.node_id = TOS_NODE_ID;
 		sreport.product_id = PRODUCT_ID;
 		sreport.temp = 0;
-
+		sreport.warning = 0;	
+	
 		settings_multicast.sin6_port = htons(4000);
 		inet_pton6(MULTICAST, &settings_multicast.sin6_addr);
 		call SyncNodes.bind(4000);
@@ -80,9 +81,12 @@ module LightP {
 
 	event void Temperature.readDone(error_t e, uint16_t data) {
 		sreport.temp = (nx_uint16_t) data;
-		
+		sreport.warning = 0;
+
 		if(sreport.temp > configure.threshold ){
 			call BlinkTimer.startPeriodic(BLINK_PERIOD);
+			sreport.warning = 1;
+ 			
 		}
 		else if(call BlinkTimer.isRunning()) {
 			call Leds.set(0);
